@@ -10,10 +10,18 @@ app.use((req, res, next) => {
   next();
 });
 
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL;
 const SECRET_KEY = process.env.SECRET_KEY || "satish123";
+
+const WEBHOOKS = {
+  es:      process.env.WEBHOOK_ES,
+  gold:    process.env.WEBHOOK_GOLD,
+  spx:     process.env.WEBHOOK_SPX,
+  nq:      process.env.WEBHOOK_NQ,
+  default: process.env.WEBHOOK_DEFAULT,
+};
+
 const COLORS = { BUY: 0x00e676, SELL: 0xff1744, INFO: 0x2196f3 };
-const EMOJI = { BUY: "🟢", SELL: "🔴" };
+const EMOJI  = { BUY: "🟢", SELL: "🔴" };
 
 app.get("/", (req, res) => res.send("TV->Discord Alert Server is running"));
 
@@ -26,8 +34,17 @@ app.post("/alert", async (req, res) => {
       action = "INFO", ticker = "N/A", price = "N/A",
       stop = "N/A", tp1 = "N/A", tp2 = "N/A", tp3 = "N/A",
       rr = "N/A", session = "RTH", timeframe = "5m",
-      bias = "N/A", signal = "N/A", pnl = "N/A", winrate = "N/A", note = ""
+      bias = "N/A", signal = "N/A", pnl = "N/A",
+      winrate = "N/A", note = "",
+      channel = "default",
+      chart_url = ""       // <-- TradingView {{chart_url}} goes here
     } = body;
+
+    const webhookUrl = WEBHOOKS[channel.toLowerCase()] || WEBHOOKS.default;
+    if (!webhookUrl) {
+      console.error("No webhook URL found for channel:", channel);
+      return res.status(500).send("No webhook configured for channel: " + channel);
+    }
 
     const actionUpper = action.toUpperCase();
     const color = COLORS[actionUpper] || COLORS.INFO;
@@ -35,28 +52,28 @@ app.post("/alert", async (req, res) => {
 
     const embed = {
       embeds: [{
-        title: emoji + " " + actionUpper + " Signal - " + ticker,
+        title: emoji + " " + actionUpper + " — " + ticker + " [" + timeframe + "]",
         color,
         fields: [
-          { name: "Entry Price", value: "`" + price + "`", inline: true },
-          { name: "Timeframe",   value: "`" + timeframe + "`", inline: true },
-          { name: "Session",     value: "`" + session + "`", inline: true },
-          { name: "TP1",         value: "`" + tp1 + "`", inline: true },
-          { name: "TP2",         value: "`" + tp2 + "`", inline: true },
-          { name: "TP3",         value: "`" + tp3 + "`", inline: true },
-          { name: "Stop Loss",   value: "`" + stop + "`", inline: true },
-          { name: "R:R",         value: "`" + rr + "`", inline: true },
-          { name: "HTF Bias",    value: "`" + bias + "`", inline: true },
-          { name: "Signal",      value: "`" + signal + "`", inline: false },
-          { name: "Session PnL", value: "`" + pnl + "`", inline: true },
-          { name: "Win Rate",    value: "`" + winrate + "`", inline: true }
+          { name: "💰 Entry",      value: "`" + price + "`",     inline: true },
+          { name: "🕐 Timeframe",  value: "`" + timeframe + "`", inline: true },
+          { name: "📊 Session",    value: "`" + session + "`",   inline: true },
+          { name: "🎯 TP1",        value: "`" + tp1 + "`",       inline: true },
+          { name: "🎯 TP2",        value: "`" + tp2 + "`",       inline: true },
+          { name: "🎯 TP3",        value: "`" + tp3 + "`",       inline: true },
+          { name: "🛑 Stop",       value: "`" + stop + "`",      inline: true },
+          { name: "⚖️ R:R",        value: "`" + rr + "`",        inline: true },
+          { name: "📈 HTF Bias",   value: "`" + bias + "`",      inline: true },
+          { name: "🔍 Signal",     value: "`" + signal + "`",    inline: false },
         ],
+        // Chart screenshot embedded as image
+        image: chart_url ? { url: chart_url } : undefined,
         footer: { text: note ? note : "WVF Ultimate | Satish Trading System" },
         timestamp: new Date().toISOString()
       }]
     };
 
-    const response = await fetch(DISCORD_WEBHOOK, {
+    const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(embed)
