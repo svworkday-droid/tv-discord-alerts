@@ -1,0 +1,18 @@
+{
+  "secret": "satish123",
+  "action": "{{strategy.order.action}}",
+  "ticker": "{{ticker}}",
+  "price": "{{strategy.order.price}}",
+  "stop": "{{plot_0}}",
+  "tp1": "{{plot_1}}",
+  "tp2": "{{plot_2}}",
+  "tp3": "{{plot_3}}",
+  "rr": "1.5",
+  "session": "RTH",
+  "timeframe": "{{interval}}",
+  "bias": "BULLISH",
+  "signal": "WVF + EMA Confluence",
+  "pnl": "{{strategy.equity}}",
+  "winrate": "N/A",
+  "note": "ES Intraday Signal"
+}
